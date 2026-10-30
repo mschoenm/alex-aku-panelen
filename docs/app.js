@@ -271,7 +271,6 @@ async function main() {
   svg.setAttribute("preserveAspectRatio", "none");
   function drawHandles() {
     const editing = $("editCorners").checked;
-    svg.hidden = !editing;
     $("resetCorners").hidden = !editing;
     stage.classList.toggle("editing", editing);
     if (!editing) return;
