@@ -1,0 +1,31 @@
+{
+  "photo": "assets/photo.jpg",
+  "mask": "assets/mask.png",
+  "light": "assets/light.png",
+  "width": 2000,
+  "height": 1500,
+  "wall": [
+    [
+      388,
+      426
+    ],
+    [
+      1500,
+      441
+    ],
+    [
+      1497,
+      1010
+    ],
+    [
+      378,
+      1000
+    ]
+  ],
+  "wallSizeM": [
+    4.6,
+    2.6
+  ],
+  "tvCenterX": 935,
+  "wallLuminance": 0.595
+}

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Akupanelen woonkamer</title>
+  <meta name="description" content="Probeer houten akoestische panelen uit op de tv-wand.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Akupanelen in de woonkamer</h1>
+    <p>Kies hout, vilt en hoeveel van de wand je wilt bedekken. Sleep over de foto om voor en na te vergelijken.</p>
+  </header>
+
+  <main>
+    <figure class="stage" id="stage">
+      <canvas id="view" aria-label="Woonkamer met akoestische panelen"></canvas>
+      <div class="split" id="split" hidden><span class="tag left">Voor</span><span class="tag right">Na</span></div>
+      <svg class="handles" id="handles" hidden></svg>
+      <p class="error" id="error" hidden></p>
+    </figure>
+
+    <form class="controls" id="controls" onsubmit="return false">
+      <fieldset>
+        <legend>Hout</legend>
+        <div class="swatches" id="woods"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Vilt</legend>
+        <div class="swatches" id="felts"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Bedekking</legend>
+        <div class="segmented">
+          <label><input type="radio" name="coverage" value="wall" checked> Hele wand</label>
+          <label><input type="radio" name="coverage" value="tv"> Achter de tv</label>
+        </div>
+        <label class="range" id="panelsRow">Breedte <output id="panelsOut"></output>
+          <input type="range" id="panels" min="1" max="7" step="1" value="3">
+        </label>
+        <label class="range" id="offsetRow">Verschuiven <output id="offsetOut"></output>
+          <input type="range" id="offset" min="-150" max="150" step="5" value="0">
+        </label>
+        <div class="segmented">
+          <label><input type="radio" name="height" value="full" checked> Tot plafond</label>
+          <label><input type="radio" name="height" value="240"> 240 cm hoog</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Latten</legend>
+        <label class="range">Latbreedte <output id="slatOut"></output>
+          <input type="range" id="slat" min="15" max="45" step="1" value="27">
+        </label>
+        <label class="range">Tussenruimte <output id="gapOut"></output>
+          <input type="range" id="gap" min="6" max="25" step="1" value="13">
+        </label>
+        <label class="range">Belichting <output id="exposureOut"></output>
+          <input type="range" id="exposure" min="60" max="140" step="1" value="100">
+        </label>
+      </fieldset>
+
+      <fieldset class="actions">
+        <label class="check"><input type="checkbox" id="compare" checked> Voor/na-schuif</label>
+        <label class="check"><input type="checkbox" id="editCorners"> Hoeken van de wand aanpassen</label>
+        <button type="button" id="resetCorners" hidden>Hoeken herstellen</button>
+        <button type="button" id="download">Afbeelding opslaan</button>
+      </fieldset>
+    </form>
+  </main>
+
+  <footer>
+    <p>Een indruk, geen echte foto: de latten worden in je browser over de originele foto getekend.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
