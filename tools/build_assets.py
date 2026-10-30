@@ -121,6 +121,36 @@ RUG_RIGHT = ((1250, 1128), (1600, 1500))  # assumed right edge once unrolled
 LAMA_URL = "https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx"
 LAMA_PATH = ROOT / ".cache" / "lama_fp32.onnx"
 
+# Wallpapered surfaces that can be painted another colour. Each gets its own lighting,
+# so the brightness step at the wall corners stays sharp.
+PAINT_SURFACES = {
+    "tv_wall": WALL,
+    # Side wall next to the dresser, up to the outer wall corner.
+    "side_wall": [(1500, 441), (1600, 385), (1716, 334), (1720, 340), (1710, 370), (1708, 430),
+                  (1705, 460), (1701, 490), (1695, 520), (1691, 550), (1688, 610), (1681, 640),
+                  (1678, 670), (1675, 700), (1672, 730), (1670, 760), (1660, 835), (1649, 910),
+                  (1650, 940), (1642, 970), (1640, 1000), (1636, 1030), (1632, 1086),
+                  (1560, 1038), (1497, 1012)],
+    # The narrow wall face beside and above the door.
+    "door_wall": [(1716, 334), (2000, 330), (2000, 441), (1745, 441), (1740, 460), (1734, 490),
+                  (1728, 520), (1725, 550), (1721, 580), (1711, 640), (1697, 730), (1686, 800),
+                  (1677, 850), (1673, 910), (1670, 940), (1664, 970), (1661, 1000), (1658, 1030),
+                  (1652, 1095), (1632, 1086), (1636, 1030), (1640, 1000), (1642, 970),
+                  (1650, 940), (1649, 910), (1660, 835), (1670, 760), (1672, 730), (1675, 700),
+                  (1678, 670), (1681, 640), (1688, 610), (1691, 550), (1695, 520), (1701, 490),
+                  (1705, 460), (1708, 430), (1710, 370), (1720, 340)],
+}
+
+# Things on those surfaces that stay when the wall is painted.
+PAINT_OBJECTS = {
+    "owl": [(1560, 764), (1592, 764), (1606, 790), (1604, 830), (1594, 880), (1580, 903),
+            (1552, 893), (1550, 840), (1548, 790)],
+    "switch": [(1567, 720), (1600, 720), (1600, 757), (1567, 757)],
+    "thermostat": [(1613, 729), (1641, 729), (1641, 758), (1613, 758)],
+    "basket": [(1415, 1005), (1497, 1012), (1560, 1038), (1632, 1086), (1700, 1110),
+               (1700, 1160), (1415, 1160)],
+}
+
 # Below the piano the wall is full of thin cables; dark pixels there are cables.
 CABLE_AREA = [(388, 893), (720, 893), (720, 1005), (388, 1005)]
 
@@ -374,13 +404,53 @@ def main():
     k = lambda r: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))
     fg = cv2.bitwise_or(objects, cables)
 
+    # Paint goes where wallpaper shows: on any wallpapered surface, not behind objects.
+    surfaces = {name: fill([points]) for name, points in PAINT_SURFACES.items()}
+    papered = cv2.dilate(fill(PAINT_SURFACES.values()), k(2))
+    # Beside the door the orange wallpaper is told apart by colour from the door frame and
+    # the drawings, magnets and cards stuck over it.
+    hsv = cv2.GaussianBlur(cv2.cvtColor(img, cv2.COLOR_BGR2HSV), (0, 0), 1.5)
+    orange = (hsv[..., 0] >= 8) & (hsv[..., 0] <= 18) & (hsv[..., 1] > 115) & (hsv[..., 2] > 70)
+    orange = cv2.morphologyEx(orange.astype(np.uint8) * 255, cv2.MORPH_OPEN, k(2))
+    orange = cv2.morphologyEx(orange, cv2.MORPH_CLOSE, k(3))
+    door_wall = cv2.dilate(surfaces["door_wall"], k(2))
+    papered[(door_wall > 0) & (cv2.dilate(surfaces["side_wall"], k(2)) == 0) & (orange == 0)] = 0
+    on_wall = fill(PAINT_OBJECTS.values())
+    paint_fg = objects | fill(TOYS.values()) | cables | on_wall
+    paint_fg_tidy = furniture | cables | on_wall
+
+    # The object outlines are a little generous. Wallpaper in that margin (colour within
+    # the local spread of the wallpaper next to it) counts as wall again. Measured on the
+    # photo as shot, with everything in place, and used for the tidy masks as well.
+    lab_f = cv2.cvtColor(img, cv2.COLOR_BGR2LAB).astype(np.float32)
+    known = ((papered > 0) & (paint_fg == 0)).astype(np.float32)
+    den = np.maximum(cv2.GaussianBlur(known, (0, 0), 20), 1e-4)[..., None]
+    mean = cv2.GaussianBlur(lab_f * known[..., None], (0, 0), 20) / den
+    var = cv2.GaussianBlur(lab_f ** 2 * known[..., None], (0, 0), 20) / den - mean ** 2
+    z = np.abs(lab_f - mean) / np.sqrt(np.maximum(var, 0) + 4)
+    near = cv2.dilate(known.astype(np.uint8), k(10)) > 0
+    # Brightness may differ a bit more (contact shadows), colour hardly.
+    like = (z[..., 0] < 2.8) & (z[..., 1:].max(axis=2) < 2.0)
+    margin = ((paint_fg > 0) & like & near).astype(np.uint8) * 255
+    margin = cv2.morphologyEx(margin, cv2.MORPH_OPEN, k(1))
+
+    def trim(fg):
+        return cv2.bitwise_and(fg, cv2.bitwise_not(margin))
+
     # Panels are visible where the wall is and no object is in front of it.
     def visible_mask(fg):
-        visible = cv2.bitwise_and(cv2.dilate(wall, k(3)), cv2.bitwise_not(fg))
+        visible = cv2.bitwise_and(cv2.dilate(wall, k(3)), cv2.bitwise_not(trim(fg)))
         return cv2.GaussianBlur(visible, (0, 0), 0.8)
 
     visible = visible_mask(fg)
     visible_tidy = visible_mask(cv2.bitwise_or(furniture, cables))
+
+    def paint_mask(fg):
+        return cv2.GaussianBlur(cv2.bitwise_and(papered, cv2.bitwise_not(trim(fg))), (0, 0), 0.8)
+
+    # Mask images: red = where panels show, green = where paint shows.
+    def mask_image(visible, fg):
+        return cv2.merge([np.zeros_like(visible), paint_mask(fg), visible])
 
     tidy = inpaint_toys(img, furniture)
     holes = fill(TOYS.values())
@@ -393,31 +463,45 @@ def main():
 
     # Wall lighting: wallpaper luminance with the pattern blurred away. Normalised
     # convolution over wall pixels only, so objects do not bleed into it.
-    wall_px = ((wall > 0) & (fg == 0)).astype(np.float32)
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
     lum = lab[:, :, 0].astype(np.float32) / 255.0
-    sigma = 18
-    num = cv2.GaussianBlur(lum * wall_px, (0, 0), sigma)
-    den = cv2.GaussianBlur(wall_px, (0, 0), sigma)
-    light = num / np.maximum(den, 1e-4)
-    # Fill the far gaps (behind big objects) from a wider blur.
-    num2 = cv2.GaussianBlur(lum * wall_px, (0, 0), sigma * 4)
-    den2 = cv2.GaussianBlur(wall_px, (0, 0), sigma * 4)
-    light2 = num2 / np.maximum(den2, 1e-4)
-    t = np.clip(den * 4, 0, 1)
-    light = light * t + light2 * (1 - t)
-    # Light colour (warm tint of the room light), from the same wall pixels.
-    tint = cv2.GaussianBlur(img.astype(np.float32) * wall_px[..., None], (0, 0), sigma * 4)
-    tint = tint / np.maximum(den2[..., None], 1e-4)
-    tint = tint / np.maximum(tint.mean(axis=2, keepdims=True), 1e-4)
-    # The wallpaper is yellowish itself, so keep only a hint of its colour as light tint.
-    tint = 1 + (tint - 1) * 0.3
+
+    def lighting(px, sigma=18):
+        num = cv2.GaussianBlur(lum * px, (0, 0), sigma)
+        den = cv2.GaussianBlur(px, (0, 0), sigma)
+        light = num / np.maximum(den, 1e-4)
+        # Fill the far gaps (behind big objects) from a wider blur.
+        num2 = cv2.GaussianBlur(lum * px, (0, 0), sigma * 4)
+        den2 = cv2.GaussianBlur(px, (0, 0), sigma * 4)
+        light2 = num2 / np.maximum(den2, 1e-4)
+        t = np.clip(den * 4, 0, 1)
+        light = light * t + light2 * (1 - t)
+        # Light colour (warm tint of the room light), from the same wall pixels.
+        tint = cv2.GaussianBlur(img.astype(np.float32) * px[..., None], (0, 0), sigma * 4)
+        tint = tint / np.maximum(den2[..., None], 1e-4)
+        tint = tint / np.maximum(tint.mean(axis=2, keepdims=True), 1e-4)
+        # The wallpaper is yellowish itself, so keep only a hint of its colour as light tint.
+        return light, 1 + (tint - 1) * 0.3
+
+    # Leave out a margin around objects: their contact shadows would otherwise show up as
+    # dark smudges where the toys are painted out.
+    shadowed = cv2.dilate(paint_fg, k(8))
+    wall_px = ((wall > 0) & (shadowed == 0)).astype(np.float32)
+    light, tint = lighting(wall_px)
+    # The other wallpapered surfaces get their own lighting, used by the paint only.
+    for name, surface in surfaces.items():
+        if name == "tv_wall":
+            continue
+        inside = cv2.dilate(surface, k(3)) > 0
+        light_s, tint_s = lighting(((surface > 0) & (shadowed == 0)).astype(np.float32))
+        light[inside] = light_s[inside]
+        tint[inside] = tint_s[inside]
 
     OUT.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(OUT / "photo.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 90])
-    cv2.imwrite(str(OUT / "mask.png"), visible)
+    cv2.imwrite(str(OUT / "mask.png"), mask_image(visible, paint_fg))
     cv2.imwrite(str(OUT / "photo-tidy.jpg"), tidy, [cv2.IMWRITE_JPEG_QUALITY, 90])
-    cv2.imwrite(str(OUT / "mask-tidy.png"), visible_tidy)
+    cv2.imwrite(str(OUT / "mask-tidy.png"), mask_image(visible_tidy, paint_fg_tidy))
     # Stored relative to the average wall brightness: 128 = average.
     light = light / light[wall_px > 0].mean()
     light_rgb = np.clip(tint * light[..., None] * 0.5 * 255, 0, 255).astype(np.uint8)

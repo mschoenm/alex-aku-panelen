@@ -32,4 +32,6 @@ python3 -m venv .venv
 
 Voor de optie "Opruimen" schildert het script speelgoed en andere spullen weg met het LaMa-inpaintmodel (Apache-2.0). Dat wordt de eerste keer gedownload naar `.cache/` (ongeveer 200 MB) en komt niet in git.
 
+Voor de optie "Muur" staat in `PAINT_SURFACES` waar behang zit. De verf krijgt per muurvlak de belichting van het behang dat er zat.
+
 De hoeken van de wand en de omtrek van alles wat ervoor staat zijn met de hand ingemeten in `tools/build_assets.py`.

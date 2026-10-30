@@ -12,6 +12,17 @@ const FELTS = [
   { id: "black", name: "Zwart", color: [0.045, 0.045, 0.045] },
   { id: "grey", name: "Grijs", color: [0.22, 0.22, 0.23] },
 ];
+// Wall paint in sRGB (0-1); no colour keeps the wallpaper.
+const PAINTS = [
+  { id: "wallpaper", name: "Behang" },
+  { id: "white", name: "Gebroken wit", color: [0.93, 0.91, 0.87] },
+  { id: "sand", name: "Zand", color: [0.85, 0.79, 0.69] },
+  { id: "sage", name: "Saliegroen", color: [0.66, 0.7, 0.6] },
+  { id: "blue", name: "Grijsblauw", color: [0.56, 0.62, 0.67] },
+  { id: "terracotta", name: "Terracotta", color: [0.76, 0.48, 0.36] },
+  { id: "dark", name: "Antraciet", color: [0.29, 0.3, 0.31] },
+  { id: "custom", name: "Eigen kleur", color: [0.48, 0.62, 0.62] },  // set by the colour picker
+];
 const PANEL_WIDTH_M = 0.6;
 
 const VERTEX = `#version 300 es
@@ -41,6 +52,8 @@ uniform vec3 uWoodBase;
 uniform vec3 uWoodGrain;
 uniform vec3 uFelt;
 uniform float uExposure;
+uniform vec3 uPaint;       // wall paint colour
+uniform float uPaintOn;    // 0 keeps the wallpaper
 uniform float uSplit;      // 0..1, left of it shows the original photo
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -55,6 +68,12 @@ void main() {
   vec3 photo = texture(uPhoto, vTex).rgb;
   vec2 px = vTex * uSize;
   if (px.x < uSplit * uSize.x) { outColor = vec4(photo, 1.0); return; }
+
+  // Paint over the wallpaper, lit like the wallpaper was.
+  vec3 light = texture(uLight, vTex).rgb * 2.0;
+  float paint = texture(uMask, vTex).g * uPaintOn;
+  vec3 painted = uPaint * light * 0.9 + (hash(px + 7.0) - 0.5) * 0.015;
+  photo = mix(photo, painted, paint);
 
   vec3 q = uToWall * vec3(px, 1.0);
   vec2 uv = q.xy / q.z;
@@ -93,7 +112,6 @@ void main() {
   vec3 felt = uFelt * (0.55 + 0.45 * sin(3.14159 * g)) * (0.9 + 0.2 * noise(px * 0.7));
 
   vec3 panel = mix(felt, wood, slat);
-  vec3 light = texture(uLight, vTex).rgb * 2.0;
   panel *= light * uExposure;
   panel += (hash(px) - 0.5) * 0.02;  // a bit of photo grain
 
@@ -193,6 +211,7 @@ async function main() {
   const state = {
     wood: WOODS[0],
     felt: FELTS[0],
+    paint: PAINTS[0],
     corners: scene.wall.map((p) => [...p]),
     split: 0.5,
   };
@@ -205,6 +224,27 @@ async function main() {
     state.felt = f;
     render();
   });
+  // The wallpaper chip shows a crop of the real wallpaper.
+  const paintCss = (p) => p.color ? `rgb(${p.color.map((c) => c * 255).join(",")})` : `url(${scene.photo}) 40% 40% / 1200%`;
+  buildSwatches($("paints"), PAINTS, paintCss, (p) => {
+    state.paint = p;
+    render();
+  });
+  // The last option takes any colour, from the browser's colour picker inside the chip.
+  const custom = PAINTS.at(-1);
+  const picker = document.createElement("input");
+  picker.type = "color";
+  picker.value = "#7a9e9e";
+  picker.setAttribute("aria-label", "Eigen muurkleur kiezen");
+  $("paints").lastElementChild.querySelector(".chip").append(picker);
+  const pickCustom = () => {
+    custom.color = [1, 3, 5].map((i) => parseInt(picker.value.slice(i, i + 2), 16) / 255);
+    $("paints").lastElementChild.querySelector("input[type=radio]").checked = true;
+    state.paint = custom;
+    render();
+  };
+  picker.addEventListener("click", pickCustom);
+  picker.addEventListener("input", pickCustom);
 
   function render() {
     textures[$("tidy").checked ? "tidy" : "asShot"].forEach((tex, unit) => {
@@ -243,6 +283,8 @@ async function main() {
     gl.uniform3fv(u("uWoodGrain"), state.wood.grain);
     gl.uniform3fv(u("uFelt"), state.felt.color);
     gl.uniform1f(u("uExposure"), exposure);
+    gl.uniform3fv(u("uPaint"), state.paint.color ?? [0, 0, 0]);
+    gl.uniform1f(u("uPaintOn"), state.paint.color ? 1 : 0);
     gl.uniform1f(u("uSplit"), $("compare").checked ? state.split : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 

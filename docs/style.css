@@ -213,6 +213,24 @@ legend ~ * { clear: both; }
 .swatch input:checked ~ span.name { color: var(--text); }
 .swatch input:focus-visible + span.chip { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Colour picker filling a chip. */
+.swatch .chip { overflow: hidden; }
+.swatch .chip input[type="color"] {
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.swatch .chip input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.swatch .chip input[type="color"]::-webkit-color-swatch { border: 0; }
+.swatch .chip input[type="color"]::-moz-color-swatch { border: 0; }
+
 .range {
   display: block;
   margin-bottom: 8px;
