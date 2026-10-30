@@ -148,7 +148,7 @@ async function main() {
   const gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true, antialias: false });
   if (!gl) throw new Error("Je browser ondersteunt geen WebGL2.");
 
-  const scene = await (await fetch("assets/scene.json")).json();
+  const scene = await (await fetch("assets/scene.json", { cache: "no-cache" })).json();
   const [photo, mask, light] = await Promise.all(
     [scene.photo, scene.mask, scene.light].map(loadImage),
   );
