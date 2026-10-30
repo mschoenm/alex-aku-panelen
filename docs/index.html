@@ -6,7 +6,7 @@
   <title>Akupanelen woonkamer</title>
   <meta name="description" content="Probeer houten akoestische panelen uit op de tv-wand.">
   <!-- Bump ?v= on every change: GitHub Pages lets browsers cache files for 10 minutes. -->
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
   <header>
@@ -35,8 +35,11 @@
 
       <fieldset>
         <legend>Afmeting</legend>
-        <label class="range">Breedte, midden achter de tv <output id="widthOut"></output>
+        <label class="range">Breedte <output id="widthOut"></output>
           <input type="range" id="width" min="30" max="460" step="5" value="380">
+        </label>
+        <label class="range">Midden <output id="centerOut"></output>
+          <input type="range" id="center" min="-230" max="230" step="5" value="0">
         </label>
         <label class="range">Hoogte, vanaf de vloer <output id="heightOut"></output>
           <input type="range" id="height" min="30" max="260" step="5" value="220">
@@ -70,6 +73,6 @@
     <p>Een indruk, geen echte foto: de latten worden in je browser over de originele foto getekend.</p>
   </footer>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

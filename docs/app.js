@@ -224,10 +224,11 @@ async function main() {
     const [wallW, wallH] = scene.wallSizeM;
     const width = +$("width").value / 100;
     const height = +$("height").value / 100;
-    // Centred on the TV; near the full width it is pushed back onto the wall.
+    // Centred on the TV plus the chosen offset; near the edges it is pushed back onto the wall.
     const tvU = apply3(toWall, scene.tvCenterX, (state.corners[0][1] + state.corners[3][1]) / 2)[0];
     const w = Math.min(width, wallW);
-    const left = Math.min(Math.max(tvU * wallW - w / 2, 0), wallW - w);
+    const left = Math.min(Math.max(tvU * wallW + +$("center").value / 100 - w / 2, 0), wallW - w);
+    const offset = Math.round((left + w / 2 - tvU * wallW) * 100);
     const span = [left, left + w];
     const top = Math.min(height, wallH);
 
@@ -247,7 +248,9 @@ async function main() {
 
     const panels = Math.ceil(width / PANEL_WIDTH_M - 1e-6);
     $("widthOut").value = `${Math.round(width * 100)} cm (${panels} ${panels === 1 ? "paneel" : "panelen"} van 60 cm)`;
-    $("heightOut").value = `${Math.round(height * 100)} cm${height >= wallH ? " (tot plafond)" : ""}`;
+    $("centerOut").value = Math.abs(offset) < 3 ? "midden van de tv"
+      : `${Math.abs(offset)} cm ${offset < 0 ? "links" : "rechts"} van de tv`;
+    $("heightOut").value =`${Math.round(height * 100)} cm${height >= wallH ? " (tot plafond)" : ""}`;
     $("slatOut").value = `${$("slat").value} mm`;
     $("gapOut").value = `${$("gap").value} mm`;
     $("exposureOut").value = `${$("exposure").value}%`;
