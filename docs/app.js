@@ -149,8 +149,8 @@ async function main() {
   if (!gl) throw new Error("Je browser ondersteunt geen WebGL2.");
 
   const scene = await (await fetch("assets/scene.json", { cache: "no-cache" })).json();
-  const [photo, mask, light] = await Promise.all(
-    [scene.photo, scene.mask, scene.light].map(loadImage),
+  const [photo, mask, light, tidyPhoto, tidyMask] = await Promise.all(
+    [scene.photo, scene.mask, scene.light, scene.tidyPhoto, scene.tidyMask].map(loadImage),
   );
   canvas.width = scene.width;
   canvas.height = scene.height;
@@ -165,15 +165,23 @@ async function main() {
   gl.enableVertexAttribArray(aPos);
   gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
-  [photo, mask, light].forEach((img, unit) => {
-    gl.activeTexture(gl.TEXTURE0 + unit);
-    gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+  const texture = (img) => {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  });
+    return tex;
+  };
+  // Units 0 and 1 hold the photo and mask, either as shot or with the toys painted out.
+  const textures = {
+    asShot: [texture(photo), texture(mask)],
+    tidy: [texture(tidyPhoto), texture(tidyMask)],
+  };
+  gl.activeTexture(gl.TEXTURE2);
+  gl.bindTexture(gl.TEXTURE_2D, texture(light));
   const u = (name) => gl.getUniformLocation(program, name);
   gl.uniform1i(u("uPhoto"), 0);
   gl.uniform1i(u("uMask"), 1);
@@ -199,6 +207,11 @@ async function main() {
   });
 
   function render() {
+    textures[$("tidy").checked ? "tidy" : "asShot"].forEach((tex, unit) => {
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+    });
+
     const toImage = squareToQuad(state.corners);
     const toWall = invert3(toImage);
     // GLSL mat3 is column-major.

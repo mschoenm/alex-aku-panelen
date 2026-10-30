@@ -1,7 +1,9 @@
 {
-  "photo": "assets/photo.jpg",
-  "mask": "assets/mask.png",
-  "light": "assets/light.png",
+  "photo": "assets/photo.jpg?v=14853a74",
+  "mask": "assets/mask.png?v=f13aece3",
+  "light": "assets/light.png?v=c2df243e",
+  "tidyPhoto": "assets/photo-tidy.jpg?v=d96b17c3",
+  "tidyMask": "assets/mask-tidy.png?v=f694416d",
   "width": 2000,
   "height": 1500,
   "wall": [

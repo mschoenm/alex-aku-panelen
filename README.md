@@ -26,8 +26,10 @@ en open http://localhost:8765.
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install opencv-python-headless numpy
+.venv/bin/pip install opencv-python-headless numpy onnxruntime
 .venv/bin/python tools/build_assets.py
 ```
+
+Voor de optie "Opruimen" schildert het script speelgoed en andere spullen weg met het LaMa-inpaintmodel (Apache-2.0). Dat wordt de eerste keer gedownload naar `.cache/` (ongeveer 200 MB) en komt niet in git.
 
 De hoeken van de wand en de omtrek van alles wat ervoor staat zijn met de hand ingemeten in `tools/build_assets.py`.
