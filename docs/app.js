@@ -210,16 +210,19 @@ async function main() {
 
     const [wallW, wallH] = scene.wallSizeM;
     const coverage = document.querySelector("input[name=coverage]:checked").value;
-    const panels = +$("panels").value;
+    const width = +$("width").value / 100;
+    const height = +$("height").value / 100;
     const offset = +$("offset").value / 100;
     let span = [0, wallW];
-    if (coverage === "tv") {
+    let top = wallH;
+    if (coverage === "custom") {
+      // Centred on the TV, shifted by the offset slider, kept on the wall.
       const tvU = apply3(toWall, scene.tvCenterX, (state.corners[0][1] + state.corners[3][1]) / 2)[0];
-      const centre = tvU * wallW + offset;
-      const half = (panels * PANEL_WIDTH_M) / 2;
-      span = [Math.max(0, centre - half), Math.min(wallW, centre + half)];
+      const w = Math.min(width, wallW);
+      const left = Math.min(Math.max(tvU * wallW + offset - w / 2, 0), wallW - w);
+      span = [left, left + w];
+      top = Math.min(height, wallH);
     }
-    const top = document.querySelector("input[name=height]:checked").value === "240" ? 2.4 : wallH;
 
     const slat = +$("slat").value / 1000;
     const gap = +$("gap").value / 1000;
@@ -235,12 +238,14 @@ async function main() {
     gl.uniform1f(u("uSplit"), $("compare").checked ? state.split : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    $("panelsOut").value = `${panels} × 60 cm = ${(panels * 0.6).toFixed(1).replace(".", ",")} m`;
+    const panels = Math.ceil(width / PANEL_WIDTH_M - 1e-6);
+    $("widthOut").value = `${Math.round(width * 100)} cm (${panels} ${panels === 1 ? "paneel" : "panelen"} van 60 cm)`;
+    $("heightOut").value = `${Math.round(height * 100)} cm${height >= wallH ? " (tot plafond)" : ""}`;
     $("offsetOut").value = `${offset > 0 ? "+" : ""}${Math.round(offset * 100)} cm`;
     $("slatOut").value = `${$("slat").value} mm`;
     $("gapOut").value = `${$("gap").value} mm`;
     $("exposureOut").value = `${$("exposure").value}%`;
-    $("panelsRow").hidden = $("offsetRow").hidden = coverage !== "tv";
+    $("customSize").hidden = coverage !== "custom";
 
     const split = $("split");
     split.hidden = !$("compare").checked || $("editCorners").checked;
