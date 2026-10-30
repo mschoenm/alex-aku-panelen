@@ -33,22 +33,13 @@
       </fieldset>
 
       <fieldset>
-        <legend>Bedekking</legend>
-        <div class="segmented">
-          <label><input type="radio" name="coverage" value="wall" checked> Hele wand</label>
-          <label><input type="radio" name="coverage" value="custom"> Eigen maat</label>
-        </div>
-        <div id="customSize" hidden>
-          <label class="range">Breedte <output id="widthOut"></output>
-            <input type="range" id="width" min="30" max="460" step="5" value="180">
-          </label>
-          <label class="range">Hoogte <output id="heightOut"></output>
-            <input type="range" id="height" min="30" max="260" step="5" value="260">
-          </label>
-          <label class="range">Verschuiven <output id="offsetOut"></output>
-            <input type="range" id="offset" min="-230" max="230" step="5" value="0">
-          </label>
-        </div>
+        <legend>Afmeting</legend>
+        <label class="range">Breedte, midden achter de tv <output id="widthOut"></output>
+          <input type="range" id="width" min="30" max="460" step="5" value="180">
+        </label>
+        <label class="range">Hoogte, vanaf de vloer <output id="heightOut"></output>
+          <input type="range" id="height" min="30" max="260" step="5" value="260">
+        </label>
       </fieldset>
 
       <fieldset>
